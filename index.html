@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Экономика понимания — новый дефицитный ресурс</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --bg2:#121a35;
+    --accent:#5eead4;
+    --accent2:#818cf8;
+    --warn:#fbbf24;
+    --text:#e8ecff;
+    --muted:#9aa6c8;
+    --card:rgba(255,255,255,.05);
+    --border:rgba(255,255,255,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+    background:radial-gradient(1200px 700px at 15% 10%, #1a2450 0%, transparent 60%),
+               radial-gradient(900px 600px at 90% 90%, #241a45 0%, transparent 55%),
+               var(--bg);
+    color:var(--text);
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Прогресс ---------- */
+  .progress{
+    position:fixed;top:0;left:0;height:4px;width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    z-index:100;transition:width .35s ease;box-shadow:0 0 14px rgba(94,234,212,.6);
+  }
+
+  /* ---------- Слайды ---------- */
+  .deck{height:100%;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;justify-content:center;
+    padding:5vh 7vw 12vh;
+    opacity:0;visibility:hidden;transform:translateY(24px) scale(.99);
+    transition:opacity .45s ease, transform .45s ease, visibility .45s;
+    overflow-y:auto;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:none}
+
+  h1{font-size:clamp(28px,4.6vw,58px);line-height:1.1;letter-spacing:-.02em;font-weight:800}
+  h1 .grad{
+    background:linear-gradient(90deg,var(--accent),var(--accent2) 60%,#f0abfc);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  h2{
+    font-size:clamp(22px,3vw,38px);font-weight:750;margin-bottom:26px;letter-spacing:-.01em;
+  }
+  h2::after{
+    content:"";display:block;width:64px;height:4px;margin-top:12px;border-radius:4px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+  }
+  h3{font-size:clamp(16px,1.5vw,20px);margin-bottom:8px;color:var(--accent)}
+  p,li{font-size:clamp(14px,1.35vw,19px);line-height:1.6;color:#dbe2ff}
+  .muted{color:var(--muted)}
+  .lead{font-size:clamp(16px,1.8vw,24px);color:#c9d3f5;max-width:70ch;margin-top:18px}
+
+  ul{list-style:none;display:grid;gap:10px}
+  ul li{padding-left:26px;position:relative}
+  ul li::before{
+    content:"";position:absolute;left:0;top:.55em;width:9px;height:9px;border-radius:3px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+  }
+
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:20px 22px;backdrop-filter:blur(6px);
+    transition:transform .25s, border-color .25s, box-shadow .25s;
+  }
+  .card:hover{transform:translateY(-4px);border-color:rgba(94,234,212,.5);box-shadow:0 12px 34px rgba(0,0,0,.35)}
+  .card .num{
+    font-size:26px;font-weight:800;color:var(--accent);display:block;margin-bottom:8px;
+    font-variant-numeric:tabular-nums;
+  }
+  .card.warn .num{color:var(--warn)}
+
+  .formula{
+    font-family:'Cambria Math',Georgia,'Times New Roman',serif;
+    font-size:clamp(17px,2vw,27px);
+    background:rgba(94,234,212,.07);
+    border:1px solid rgba(94,234,212,.3);
+    border-left:4px solid var(--accent);
+    border-radius:12px;padding:18px 22px;margin:14px 0;
+    overflow-x:auto;white-space:nowrap;
+  }
+  .formula small{display:block;white-space:normal;font-family:inherit;font-size:.62em;color:var(--muted);margin-top:10px}
+  var,em{font-style:italic}
+  sub,sup{font-size:.65em}
+
+  .tag{
+    display:inline-block;padding:5px 12px;border-radius:999px;font-size:12.5px;
+    background:rgba(129,140,248,.15);border:1px solid rgba(129,140,248,.4);
+    color:#c7ccff;margin:0 8px 8px 0;font-weight:600;letter-spacing:.02em;
+  }
+
+  /* Столбики «дефицита» */
+  .bars{display:grid;gap:14px;margin-top:8px}
+  .bar-row{display:grid;grid-template-columns:150px 1fr 70px;gap:14px;align-items:center}
+  .bar-track{height:14px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden}
+  .bar-fill{height:100%;width:0;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width 1.1s cubic-bezier(.22,.9,.28,1)}
+  .bar-row span:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px}
+  .slide.active .bar-fill{/* width задаётся inline */}
+
+  table{width:100%;border-collapse:collapse;font-size:clamp(13px,1.2vw,16px)}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--border)}
+  th{color:var(--accent);font-weight:700;text-transform:uppercase;font-size:.8em;letter-spacing:.06em}
+  tr:hover td{background:rgba(255,255,255,.03)}
+
+  .quote{
+    border-left:4px solid var(--accent2);padding:6px 0 6px 20px;
+    font-size:clamp(15px,1.7vw,22px);color:#d7def7;font-style:italic;max-width:75ch;
+  }
+
+  /* ---------- Навигация ---------- */
+  .nav{
+    position:fixed;bottom:18px;right:22px;display:flex;gap:10px;align-items:center;z-index:100;
+  }
+  .nav button{
+    width:46px;height:46px;border-radius:12px;border:1px solid var(--border);
+    background:rgba(255,255,255,.07);color:var(--text);font-size:20px;cursor:pointer;
+    backdrop-filter:blur(8px);transition:.2s;display:grid;place-items:center;
+  }
+  .nav button:hover{background:rgba(94,234,212,.18);border-color:var(--accent);transform:translateY(-2px)}
+  .counter{
+    position:fixed;bottom:24px;left:26px;font-size:14px;color:var(--muted);
+    font-variant-numeric:tabular-nums;z-index:100;letter-spacing:.06em;
+  }
+  .hint{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    font-size:12.5px;color:var(--muted);z-index:99;opacity:.85;text-align:center;
+  }
+  @media(max-width:640px){.hint{display:none}.bar-row{grid-template-columns:100px 1fr 52px}}
+
+  /* Терминал-демо */
+  .terminal{
+    background:#070b17;border:1px solid var(--border);border-radius:14px;
+    padding:18px 20px;font-family:'JetBrains Mono',Consolas,monospace;
+    font-size:clamp(12.5px,1.15vw,15px);line-height:1.75;color:#a8f0e0;overflow-x:auto;
+  }
+  .terminal .c{color:#6b7aa8}
+  .terminal .k{color:#f0abfc}
+  .terminal .v{color:#fbbf24}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1. Титул -->
+  <section class="slide active">
+    <div>
+      <span class="tag">Цифровая экономика</span>
+      <span class="tag">Теория внимания</span>
+      <h1>Экономика понимания<br><span class="grad">как новый дефицитный ресурс</span></h1>
+      <p class="lead">Внимание как благо · математическая модель ценности внимания · алгоритмы ранжирования</p>
+      <p class="muted" style="margin-top:32px;font-size:15px">Презентация · 2026</p>
+    </div>
+  </section>
+
+  <!-- 2. Проблема -->
+  <section class="slide">
+    <h2>Проблема: изобилие информации</h2>
+    <div class="grid g2">
+      <div>
+        <ul>
+          <li>Информация перестала быть дефицитом — её производство почти бесплатно.</li>
+          <li>Дефицит сместился к <strong>способности человека её обработать</strong>.</li>
+          <li>Герберт Саймон (1971): «Изобилие информации создаёт дефицит внимания».</li>
+          <li>Новый дефицит — не доступ к данным, а <strong>понимание</strong>: связывание сигналов в работающую модель мира.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Ключевой сдвиг</h3>
+        <p class="muted" style="margin-top:6px">Экономика <em>внимания</em> отвечает на вопрос «куда направлен взгляд». Экономика <em>понимания</em> — «что осталось в голове и как это изменило решения».</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Внимание как благо -->
+  <section class="slide">
+    <h2>Внимание как экономическое благо</h2>
+    <div class="grid g3">
+      <div class="card"><span class="num">1</span><h3>Ограниченность</h3><p>Жёсткий бюджет: ~16 часов бодрствования, из них глубокая концентрация — 2–4 часа.</p></div>
+      <div class="card"><span class="num">2</span><h3>Конкуренция</h3><p>Внимание нельзя «размножить»: потраченное на X не достанется Y. Чистая альтернативная стоимость.</p></div>
+      <div class="card"><span class="num">3</span><h3>Ценность</h3><p>Внимание конвертируется в деньги, знания, власть и капитал. Отсюда рынок за него.</p></div>
+      <div class="card"><span class="num">4</span><h3>Невосполнимость</h3><p>В отличие от денег, внимание не накапливается: неиспользованный час не «переносится» на завтра.</p></div>
+      <div class="card"><span class="num">5</span><h3>Неоднородность</h3><p>Качество внимания различается: рассеянное vs. глубокое. Это разные товары с разной ценой.</p></div>
+      <div class="card warn"><span class="num">6</span><h3>Отрицательные экстерналии</h3><p>Перегрузка ведёт к выгоранию, ошибкам, падению продуктивности — издержки для общества.</p></div>
+    </div>
+  </section>
+
+  <!-- 4. Аналогия с дефицитом -->
+  <section class="slide">
+    <h2>Сколько внимания осталось?</h2>
+    <p class="muted" style="margin-bottom:22px">Бюджет дня и его распределение — иллюстративные оценки.</p>
+    <div class="bars">
+      <div class="bar-row"><span>Всего часов бодрствования</span><div class="bar-track"><div class="bar-fill" data-w="100%"></div></div><span>16 ч</span></div>
+      <div class="bar-row"><span>Доступно «чистого» внимания</span><div class="bar-track"><div class="bar-fill" data-w="22%"></div></div><span>~3.5 ч</span></div>
+      <div class="bar-row"><span>Поглощают соцсети и мессенджеры</span><div class="bar-track"><div class="bar-fill" data-w="30%"></div></div><span>~2.3 ч</span></div>
+      <div class="bar-row"><span>Потери на переключения контекста</span><div class="bar-track"><div class="bar-fill" data-w="18%"></div></div><span>~1.4 ч</span></div>
+      <div class="bar-row"><span>Остаётся на понимание и синтез</span><div class="bar-track"><div class="bar-fill" data-w="10%"></div></div><span>~0.8 ч</span></div>
+    </div>
+  </section>
+
+  <!-- 5. Модель ценности внимания -->
+  <section class="slide">
+    <h2>Математическая модель ценности внимания</h2>
+    <p class="muted">Базовая функция полезности единицы внимания, направленной на контент <em>i</em>:</p>
+    <div class="formula">
+      V<sub>i</sub> = (U<sub>i</sub> · R<sub>i</sub> · Q<sub>i</sub>) / (1 + D<sub>i</sub> + N<sub>i</sub>)
+      <small>U<sub>i</sub> — полезность (насколько решает задачу) · R<sub>i</sub> — релевантность · Q<sub>i</sub> — качество источника · D<sub>i</sub> — задержка доставки · N<sub>i</sub> — шум и отвлечения</small>
+    </div>
+    <div class="grid g2" style="margin-top:8px">
+      <div class="card"><h3>Порог понимания</h3><p>Понимание возникает, если полученное внимание превышает порог: <em>t<sub>i</sub> ≥ t*<sub>i</sub></em>. Ниже порога — «просмотр без понимания».</p></div>
+      <div class="card"><h3>Убывающая отдача</h3><p>∂V/∂t → 0 при росте <em>t</em>: первая минута объяснения ценнее десятой.</p></div>
+    </div>
+  </section>
+
+  <!-- 6. Формальная постановка -->
+  <section class="slide">
+    <h2>Формальная постановка задачи</h2>
+    <div class="formula">
+      max<sub>t ≥ 0</sub> Σ<sub>i</sub> V<sub>i</sub>(t<sub>i</sub>) &nbsp;&nbsp; при &nbsp;&nbsp; Σ<sub>i</sub> t<sub>i</sub> ≤ T
+      <small>T — суточный бюджет внимания; распределение по Лагранжу: ∂V<sub>i</sub>/∂t<sub>i</sub> = λ для всех активных i</small>
+    </div>
+    <ul>
+      <li><strong>λ — «теневая цена» времени:</strong> сколько ценности приносит последняя минута внимания. У каждого человека она своя и растёт при перегрузке.</li>
+      <li><strong>Глубокое vs. рассеянное внимание</strong> — разные товары: одно даёт высокий V при малом объёме, другое — низкий V, но дешёвое.</li>
+      <li><strong>Рынок</strong> перераспределяет внимание туда, где λ максимальна, — отсюда кликбейт как «дешёвая» стратегия.</li>
+    </ul>
+  </section>
+
+  <!-- 7. Экономика понимания -->
+  <section class="slide">
+    <h2>От внимания — к пониманию</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Внимание</h3>
+        <p class="muted">Метрика: секунды, клики, показы.<br>Мера: время контакта.</p>
+      </div>
+      <div class="card">
+        <h3>Понимание</h3>
+        <p class="muted">Метрика: изменение модели мира и решений.<br>Мера: способность воспроизвести, применить, объяснить.</p>
+      </div>
+    </div>
+    <div class="formula" style="margin-top:20px">
+      Понимание ∝ (Внимание × Релевантность × Когерентность) − Когнитивная нагрузка
+      <small>Понял = могу пересказать, связать с известным и использовать в новом контексте</small>
+    </div>
+  </section>
+
+  <!-- 8. Алгоритмы ранжирования -->
+  <section class="slide">
+    <h2>Алгоритмы ранжирования</h2>
+    <p class="muted" style="margin-bottom:20px">Как платформы распределяют дефицитное внимание.</p>
+    <div class="grid g3">
+      <div class="card"><span class="num">01</span><h3>Коллаборативная фильтрация</h3><p>«Похожие пользователи смотрели это» — работает на поведенческих сигналах.</p></div>
+      <div class="card"><span class="num">02</span><h3>Контентные модели</h3><p>Сходство embedding-векторов запроса и документа, тематические признаки.</p></div>
+      <div class="card"><span class="num">03</span><h3>Learning to Rank</h3><p>Обучение функции ранжирования на разметке релевантности (pairwise / listwise).</p></div>
+      <div class="card"><span class="num">04</span><h3>Бандиты и explore/exploit</h3><p>Баланс между показом проверенного и исследованием нового контента.</p></div>
+      <div class="card"><span class="num">05</span><h3>Трансформеры и LLM-ранжировщики</h3><p>Семантическое сопоставление, учитывающее контекст и намерение.</p></div>
+      <div class="card"><span class="num">06</span><h3>Многорукие оптимизации</h3><p>Одновременно удержание, вовлечённость, монетизация и (редко) качество понимания.</p></div>
+    </div>
+  </section>
+
+  <!-- 9. Формула ранжирования -->
+  <section class="slide">
+    <h2>Целевая функция ранжирования</h2>
+    <div class="formula">
+      Score(i) = w<sub>1</sub>·P(click) + w<sub>2</sub>·E[time] + w<sub>3</sub>·P(convert) − w<sub>4</sub>·Harm(i)
+      <small>Веса w определяют, чему платформа отдаёт дефицитное внимание</small>
+    </div>
+    <div class="terminal" style="margin-top:18px">
+      <div><span class="c"># псевдокод: что оптимизируется на практике</span></div>
+      <div>score = <span class="k">0.35</span>*p_ctr + <span class="k">0.25</span>*expected_dwell + <span class="k">0.20</span>*p_watch_full</div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; + <span class="k">0.10</span>*p_share + <span class="k">0.10</span>*p_follow</div>
+      <div><span class="c"># понимание почти никогда не входит в формулу напрямую</span></div>
+      <div><span class="c"># → отсюда разрыв между «кликнул» и «понял»</span></div>
+    </div>
+    <p class="muted" style="margin-top:16px">Если в целевую функцию не входит <em>понимание</em>, система оптимизирует его суррогаты — клики и время.</p>
+  </section>
+
+  <!-- 10. Провал рынка -->
+  <section class="slide">
+    <h2>Провалы рынка внимания</h2>
+    <table>
+      <thead><tr><th>Провал</th><th>Механизм</th><th>Следствие</th></tr></thead>
+      <tbody>
+        <tr><td>Кликбейт</td><td>Цель — клик, а не ценность</td><td>Разрыв «обещание — содержание»</td></tr>
+        <tr><td>Фильтр-пузырь</td><td>Ранжирование усиливает подтверждение</td><td>Сужение картины мира</td></tr>
+        <tr><td>Перегрузка</td><td>Бесконечная лента и autoplay</td><td>Выгорание, падение глубины</td></tr>
+        <tr><td>Асимметрия информации</td><td>Алгоритм знает о нас больше</td><td>Манипуляция выбором</td></tr>
+        <tr><td>Внешние эффекты</td><td>Издержки несёт человек и общество</td><td>Недопроизводство понимания</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 11. Что делать -->
+  <section class="slide">
+    <h2>Как вернуть понимание в экономику</h2>
+    <div class="grid g2">
+      <div>
+        <ul>
+          <li><strong>Новые метрики:</strong> не время, а воспроизводимость знания — «понял ли пользователь».</li>
+          <li><strong>Аудиты алгоритмов:</strong> оценка влияния ранжирования на качество решений.</li>
+          <li><strong>Право на объяснение:</strong> прозрачность критериев выдачи.</li>
+          <li><strong>Дизайн «медленного»:</strong> пауза, резюме, структура вместо бесконечной ленты.</li>
+        </ul>
+      </div>
+      <div>
+        <ul>
+          <li><strong>Личный бюджет внимания:</strong> осознанное распределение часов.</li>
+          <li><strong>Образование:</strong> навык проверки источников и построения моделей.</li>
+          <li><strong>Новые рынки:</strong> платформы, торгующие пониманием, а не кликами.</li>
+          <li><strong>Регулирование:</strong> ответственность за вред от оптимизации вовлечённости.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. Выводы -->
+  <section class="slide">
+    <h2>Выводы</h2>
+    <div class="grid g3">
+      <div class="card"><span class="num">1</span><p>Дефицит сместился от информации к <strong>вниманию</strong>, а затем — к <strong>пониманию</strong>.</p></div>
+      <div class="card"><span class="num">2</span><p>Внимание — ограниченное, конкурентное и невосполнимое <strong>благо</strong> с теневой ценой λ.</p></div>
+      <div class="card"><span class="num">3</span><p>Модель <em>V = U·R·Q / (1+D+N)</em> объясняет, почему дешёвое внимание вытесняет ценное.</p></div>
+      <div class="card"><span class="num">4</span><p>Алгоритмы ранжирования оптимизируют <strong>суррогаты</strong> понимания — клики и время.</p></div>
+      <div class="card"><span class="num">5</span><p>Это классический <strong>провал рынка</strong>: частный оптимум платформы ≠ общественный оптимум.</p></div>
+      <div class="card warn"><span class="num">6</span><p>Решение — <strong>встроить понимание</strong> в метрики, дизайн и регулирование.</p></div>
+    </div>
+    <p class="quote" style="margin-top:26px">«Богатство XXI века — не доступ к информации, а способность превратить её в понимание».</p>
+  </section>
+
+  <!-- 13. Финал -->
+  <section class="slide">
+    <div style="text-align:center">
+      <h1><span class="grad">Спасибо за внимание</span></h1>
+      <p class="lead" style="margin:20px auto 0">Вопросы и обсуждение</p>
+      <div style="margin-top:34px">
+        <span class="tag">Герберт Саймон</span>
+        <span class="tag">Экономика внимания</span>
+        <span class="tag">Learning to Rank</span>
+        <span class="tag">Провалы рынка</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="counter"><span id="cur">1</span> / <span id="total">13</span></div>
+<div class="nav">
+  <button id="prev" aria-label="Назад">‹</button>
+  <button id="full" aria-label="Полный экран">⛶</button>
+  <button id="next" aria-label="Вперёд">›</button>
+</div>
+<div class="hint">← → или пробел · свайп на телефоне · F — во весь экран</div>
+
+<script>
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const progress = document.getElementById('progress');
+  const cur = document.getElementById('cur');
+  const totalEl = document.getElementById('total');
+  let i = 0;
+  totalEl.textContent = slides.length;
+
+  function animateBars(slide){
+    slide.querySelectorAll('.bar-fill').forEach(el=>{
+      el.style.width = '0%';
+      requestAnimationFrame(()=>{ setTimeout(()=>{ el.style.width = el.dataset.w; }, 60); });
+    });
+  }
+
+  function show(n){
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    slides[i].classList.remove('active');
+    i = n;
+    const s = slides[i];
+    s.classList.add('active');
+    s.scrollTop = 0;
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    cur.textContent = i + 1;
+    animateBars(s);
+  }
+
+  document.getElementById('next').onclick = () => show(i + 1);
+  document.getElementById('prev').onclick = () => show(i - 1);
+
+  document.addEventListener('keydown', e => {
+    if(['ArrowRight','ArrowDown',' ','PageDown','Enter'].includes(e.key)){ e.preventDefault(); show(i+1); }
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); show(i-1); }
+    else if(e.key === 'Home'){ show(0); }
+    else if(e.key === 'End'){ show(slides.length-1); }
+    else if(e.key.toLowerCase() === 'f'){ toggleFull(); }
+  });
+
+  function toggleFull(){
+    if(!document.fullscreenElement){ document.documentElement.requestFullscreen?.(); }
+    else{ document.exitFullscreen?.(); }
+  }
+  document.getElementById('full').onclick = toggleFull;
+
+  // Свайпы
+  let x0 = null, y0 = null;
+  document.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+  document.addEventListener('touchend', e => {
+    if(x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    const dy = e.changedTouches[0].clientY - y0;
+    if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) show(dx < 0 ? i+1 : i-1);
+    x0 = y0 = null;
+  }, {passive:true});
+
+  // Клик по правой/левой половине (не мешает кнопкам)
+  document.getElementById('deck').addEventListener('click', e => {
+    if(e.target.closest('.nav') || e.target.closest('a') || e.target.closest('button')) return;
+    show(e.clientX > window.innerWidth * 0.5 ? i + 1 : i - 1);
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>
